@@ -1,0 +1,757 @@
+' WEEKLY MASTERLIST
+' LGBESPIRITU 01/16/2024
+'
+'
+Sub weeklyMasterlist()
+
+Application.ScreenUpdating = False
+Application.Calculation = xlCalculationManual
+Application.EnableEvents = False
+
+    Dim masterlisthrisFile As String
+    Dim manpowerFile As String
+    Dim outputFile As String
+    Dim fixedtermemployeeFile As String
+    Dim fixedtermemployeeSheet As String
+    Dim masterlisthrisNewSheet As Worksheet
+    Dim originalPath As String
+    Dim masterlisthrisPath As String
+    Dim fixedtermemployeePath As String
+    Dim originalSheet As Worksheet
+    Dim originalWorkbook As Workbook
+    Dim masterlistHrisWorkbook As Workbook
+    Dim fixedtermemployeeWorkbook As Workbook
+    Dim newPath As String
+    Dim NewWorkbook As Workbook
+    Dim ManpowerListSheet As Worksheet
+    Dim masterlistHrisSheet As Worksheet
+    Dim lastRow As Long
+    Dim lastRowMasterlistHris As Long
+    Dim headerRow As Long
+    Dim xCell As Range
+    Dim i As Long
+    Dim noticeOfSeparationsWorkbook As Workbook
+    Dim noticeOfSeparationsSheet2023 As Worksheet
+    Dim noticeOfSeparationsSheet2024 As Worksheet
+    Dim noticeOfSeparationsPath As String
+    Dim columnsToKeep As Variant
+    Dim ColumnOrder As Variant, ndx As Integer
+    Dim Found As Range, counter As Integer
+    Dim positionColumn As Range
+    Dim positionColumn2 As Range
+    Dim replaceValues As Variant
+    Dim GSTableWorkbook As Workbook
+    Dim GSTableSheet As Worksheet
+    Dim groupsectornewSheet As Worksheet
+    Dim GSTableFilePath As String
+    Dim groupsectorlastRow As Long
+    Dim rankColumn As Range
+    Dim newGradeColumn As Range
+    Dim rank As String
+    Dim costcenterfilePath As String
+
+    ' >>> IMPORTANT: PLEASE CHANGE THE PATH HERE BEFORE RUNNING THE SCRIPT <<<
+    masterlisthrisFile = "C:\Users\espiritulb\Desktop\Weekly Masterlist\Masterlist - HRIS as of Feb 1.xls"
+    manpowerFile = "C:\Users\espiritulb\Desktop\Weekly Masterlist\MANPOWER HEADCOUNT-December 31, 2023_lgbe_v3"
+    manpowerfilePLN = "PLN12312023"
+    outputFile = "C:\Users\espiritulb\Desktop\Weekly Masterlist\WeeklyMasterlist.xlsx"
+    fixedtermemployeeFile = "C:\Users\espiritulb\Desktop\Weekly Masterlist\FTE-JAN 29, 2024.xlsx"
+    fixedtermemployeeSheet = "JANUARY 2024_masterlist"
+    noticeOfSeparationsFile = "C:\Users\espiritulb\Desktop\Weekly Masterlist\NOTICE OF SEPARATIONS-DATABASE UPDATED.xlsx"
+    GSTableFilePath = "C:\Users\espiritulb\Desktop\Weekly Masterlist\GSTable.xlsx"
+    costcenterfilePath = "C:\Users\espiritulb\Desktop\Weekly Masterlist\RadGridExport (7).xlsx"
+        
+    '__________MANPOWER LIST
+    
+    
+    ' Getting the Manpower Masterlist
+    originalPath = manpowerFile
+    
+    ' Set the reference to the original workbook without opening it visibly
+    Set originalWorkbook = Workbooks.Open(originalPath, UpdateLinks:=False, ReadOnly:=True)
+
+    ' Setting the PLN Sheet
+    Set originalSheet = originalWorkbook.Sheets(manpowerfilePLN)
+    
+    ' Add a new workbook
+    Set NewWorkbook = Workbooks.Add
+
+    ' Copy the sheet to the new workbook
+    originalSheet.Copy Before:=NewWorkbook.Sheets(1)
+
+    ' Reference the new sheet
+    Set ManpowerListSheet = NewWorkbook.Sheets(1)
+    
+    ' Paste special to convert formulas to values
+    ManpowerListSheet.UsedRange.Value = ManpowerListSheet.UsedRange.Value
+    
+    ' Rename lang si PLN to MASTERLIST
+    ManpowerListSheet.Name = "MANPOWERLIST"
+    
+    ' Convert the EMPNO to Number (galing stackoverflow source)
+    With ManpowerListSheet.Range("B2:B" & ManpowerListSheet.Cells(ManpowerListSheet.Rows.Count, "B").End(xlUp).Row)
+        For Each xCell In .Cells
+            xCell.Value = CDec(xCell.Value)
+        Next xCell
+    End With
+    
+    ' Close the original workbook without saving changes
+    originalWorkbook.Close False
+    
+    '__________MASTERLIST HRIS FILE
+    
+    ' Getting the masterlistHRIS file
+    masterlisthrisPath = masterlisthrisFile
+    
+    ' Get the masterlistHRIS file
+    Set masterlistHrisWorkbook = Workbooks.Open(masterlisthrisPath, UpdateLinks:=False, ReadOnly:=True)
+    
+    ' Reference the masterlist HRIS sheet from the external workbook
+    Set masterlistHrisSheet = masterlistHrisWorkbook.Sheets(1) ' Adjust sheet index as needed
+    
+    ' Add new sheet in the new workbook
+    Set masterlisthrisNewSheet = NewWorkbook.Sheets.Add
+    
+    ' Find the last used row in the new sheet
+    lastRow = masterlisthrisNewSheet.Cells(masterlisthrisNewSheet.Rows.Count, "A").End(xlUp).Row
+
+    ' Copy the content of masterlist HRIS sheet to the new sheet
+    masterlistHrisSheet.UsedRange.Copy masterlisthrisNewSheet.Cells(lastRow + 1, 1)
+
+    ' Delete the first row in the new sheet
+    masterlisthrisNewSheet.Rows(1).Delete Shift:=xlUp
+
+    ' Convert the "EMPLOYEE NUMBER" column to numbers
+    With masterlisthrisNewSheet.Range("A2:A" & masterlisthrisNewSheet.Cells(masterlisthrisNewSheet.Rows.Count, "A").End(xlUp).Row)
+        For Each xCell In .Cells
+            xCell.Value = CDec(xCell.Value)
+        Next xCell
+    End With
+    
+    ' Add a new column for VLookup result in new sheet
+    masterlisthrisNewSheet.Columns("A").Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
+
+    ' Set the header for the new column
+    masterlisthrisNewSheet.Cells(1, 1).Value = "VALIDATION"
+    
+    ' Rename lang si masterlistHRIS
+    masterlisthrisNewSheet.Name = "MASTERLISTHRIS"
+    
+    ' Close the original workbook without saving changes
+    masterlistHrisWorkbook.Close False
+    
+    ' Find the last used row in the Masterlist HRIS
+    lastRowMasterlistHris = masterlisthrisNewSheet.Cells(masterlisthrisNewSheet.Rows.Count, "B").End(xlUp).Row
+    
+    ' Perform VLOOKUP for the entire column A
+    For i = 2 To lastRowMasterlistHris
+        masterlisthrisNewSheet.Range("A" & i).Formula = "=VLOOKUP(B" & i & ",MANPOWERLIST!B:B,1,FALSE)"
+    Next i
+    
+    ' Find the row number of the header ("VALIDATION")
+    headerRow = masterlisthrisNewSheet.Rows(1).Find("VALIDATION").Row
+
+    ' Delete yung N/A sa Validation Column and yung Date of Join below 2023
+    With masterlisthrisNewSheet
+        .Columns("A:K").AutoFilter Field:=11, Criteria1:="<1/1/2023", Operator:=xlAnd
+        .Columns("A:K").AutoFilter Field:=1, Criteria1:="#N/A"
+        If headerRow > 0 Then
+            .Rows(headerRow + 1).Resize(.Rows.Count - headerRow - 1).Delete Shift:=xlUp
+        End If
+        .AutoFilterMode = False ' Turn off AutoFilter
+    End With
+    
+    ' Delete the VALIDATION column
+    masterlisthrisNewSheet.Columns("A").Delete
+    
+    ' Insert a new column at the beginning and name it "FTEVALIDATION"
+    masterlisthrisNewSheet.Columns("A:A").Insert Shift:=xlToRight
+    masterlisthrisNewSheet.Cells(1, 1).Value = "FTEVALIDATION"
+    
+    '__________FIXED TERM EMPLOYEE
+    
+    ' Getting the fixed term employee file
+    fixedtermemployeePath = fixedtermemployeeFile
+    
+    ' Get the fixed term employee workbook
+    Set fixedtermemployeeWorkbook = Workbooks.Open(fixedtermemployeePath, UpdateLinks:=False, ReadOnly:=True)
+    
+    ' Reference the fixed term employee sheet
+    Set fixedtermoriginalSheet = fixedtermemployeeWorkbook.Sheets(fixedtermemployeeSheet)
+    
+    ' Add new sheet in the new workbook (Use a new variable)
+    Set NewSheetFixedTerm = NewWorkbook.Sheets.Add
+    
+    ' Rename the new sheet to "FTE"
+    NewSheetFixedTerm.Name = "FTE"
+    
+    ' Find the last used row in the new sheet
+    lastRow = NewSheetFixedTerm.Cells(NewSheetFixedTerm.Rows.Count, "A").End(xlUp).Row
+    
+    ' Copy the content of fixed term employee sheet to the new sheet
+    fixedtermoriginalSheet.UsedRange.Copy NewSheetFixedTerm.Cells(lastRow + 1, 1)
+    
+    ' Paste special to convert formulas to values
+    NewSheetFixedTerm.UsedRange.Value = NewSheetFixedTerm.UsedRange.Value
+    
+    ' Close the fixed term employee workbook without saving changes
+    fixedtermemployeeWorkbook.Close False
+
+    ' Delete the first 4 rows in the fixed term employee sheet
+    NewSheetFixedTerm.Rows("1:5").Delete Shift:=xlUp
+    
+    ' Filter and delete rows based on date criteria
+    With NewSheetFixedTerm
+        ' Apply AutoFilter to Column O (eto yung to date < Make sure lang na laging nasa O column siya)
+        .Columns(15).AutoFilter Field:=1, Criteria1:="<" & Date ' Date is today
+        ' Delete visible rows (excluding header)
+        On Error Resume Next ' In case there are no visible cells
+        .AutoFilter.Range.Offset(1, 0).Resize(.AutoFilter.Range.Rows.Count - 1).EntireRow.Delete
+        On Error GoTo 0 ' Reset error handling
+        ' Turn off AutoFilter
+        .AutoFilterMode = False
+    End With
+    
+    ' Perform VLOOKUP for the entire column A tapos if may hit then change it to DO NOT DELETE
+    For i = 2 To lastRowMasterlistHris
+    ' Use IFERROR to handle the case where VLOOKUP does not find a match
+        masterlisthrisNewSheet.Range("A" & i).Formula = "=IFERROR(IF(VLOOKUP(B" & i & ",FTE!B:B,1,FALSE)<>"""",""DO NOT DELETE"",""OK""), ""OK"")"
+    ' Paste values only
+        masterlisthrisNewSheet.Range("A" & i).Value = masterlisthrisNewSheet.Range("A" & i).Value
+    Next i
+    
+    ' Delete the "FTE" sheet
+    Application.DisplayAlerts = False ' Disable alerts to avoid confirmation prompt
+    On Error Resume Next
+    NewWorkbook.Sheets("FTE").Delete
+    On Error GoTo 0
+    Application.DisplayAlerts = True ' Enable alerts back
+    
+    ' Delete the "Sheet1" sheet
+    Application.DisplayAlerts = False ' Disable alerts to avoid confirmation prompt
+    On Error Resume Next
+    NewWorkbook.Sheets("Sheet1").Delete
+    On Error GoTo 0
+    Application.DisplayAlerts = True ' Enable alerts back
+    
+    '__________SEPARATION DATABASE FILE
+    
+    ' Getting the Notice of Separations file
+    noticeOfSeparationsPath = noticeOfSeparationsFile
+    
+    ' Get the Notice of Separations file
+    Set noticeOfSeparationsWorkbook = Workbooks.Open(noticeOfSeparationsPath, UpdateLinks:=False, ReadOnly:=True)
+    
+    ' Reference the sheets "2023" and "2024" in the Notice of Separations file
+    Set noticeOfSeparationsSheet2023 = noticeOfSeparationsWorkbook.Sheets("2023")
+    Set noticeOfSeparationsSheet2024 = noticeOfSeparationsWorkbook.Sheets("2024")
+    
+    ' Copy the sheets to the new workbook and turn off AutoFilter
+    noticeOfSeparationsSheet2023.Copy Before:=NewWorkbook.Sheets(1)
+    NewWorkbook.Sheets(1).AutoFilterMode = False
+    
+    noticeOfSeparationsSheet2024.Copy Before:=NewWorkbook.Sheets(1)
+    NewWorkbook.Sheets(1).AutoFilterMode = False
+
+    ' Convert the values in column A of the "2023" sheet to numbers
+    With NewWorkbook.Sheets("2023").Range("A2:A" & NewWorkbook.Sheets("2023").Cells(NewWorkbook.Sheets("2023").Rows.Count, "A").End(xlUp).Row)
+        For Each xCell In .Cells
+            xCell.Value = CDec(xCell.Value)
+        Next xCell
+    End With
+    
+    ' Convert the EMPNO to Number for "2024" sheet
+    With noticeOfSeparationsSheet2024.Range("A2:A" & noticeOfSeparationsSheet2024.Cells(noticeOfSeparationsSheet2024.Rows.Count, "A").End(xlUp).Row)
+        For Each xCell In .Cells
+            xCell.Value = CDec(xCell.Value)
+        Next xCell
+    End With
+    
+    ' Convert the values in column A of the "2024" sheet to numbers
+    With NewWorkbook.Sheets("2024").Range("A2:A" & NewWorkbook.Sheets("2024").Cells(NewWorkbook.Sheets("2024").Rows.Count, "A").End(xlUp).Row)
+        For Each xCell In .Cells
+            xCell.Value = CDec(xCell.Value)
+        Next xCell
+    End With
+    
+    ' Filter and delete rows in "2023" sheet based on date criteria
+    With NewWorkbook.Sheets("2023")
+        ' Format the entire column K as Date
+        .Columns(11).NumberFormat = "mm/dd/yyyy"
+        
+        ' Apply AutoFilter to Column K
+        .Columns(11).AutoFilter Field:=1, Criteria1:=">" & Format(Date, "mm/dd/yyyy") ' Date is today
+        
+        ' Check if there are visible cells (excluding header) before attempting to delete
+        If WorksheetFunction.CountA(.Columns(11).SpecialCells(xlCellTypeVisible)) > 1 Then
+            ' Delete visible rows (excluding header)
+            On Error Resume Next ' In case there are no visible cells
+            .AutoFilter.Range.Offset(1, 0).Resize(.AutoFilter.Range.Rows.Count - 1).EntireRow.Delete
+            On Error GoTo 0 ' Reset error handling
+        End If
+        
+        ' Turn off AutoFilter
+        .AutoFilterMode = False
+    End With
+    
+    ' Filter and delete rows in "2024" sheet based on date criteria
+    With NewWorkbook.Sheets("2024")
+        .Columns(11).NumberFormat = "mm/dd/yyyy"
+        
+        ' Apply AutoFilter to Column K
+        .Columns(11).AutoFilter Field:=1, Criteria1:=">" & Format(Date, "mm/dd/yyyy") ' Date is today
+        
+        ' Check if there are visible cells (excluding header) before attempting to delete
+        If WorksheetFunction.CountA(.Columns(11).SpecialCells(xlCellTypeVisible)) > 1 Then
+            ' Delete visible rows (excluding header)
+            On Error Resume Next ' In case there are no visible cells
+            .AutoFilter.Range.Offset(1, 0).Resize(.AutoFilter.Range.Rows.Count - 1).EntireRow.Delete
+            On Error GoTo 0 ' Reset error handling
+        End If
+        
+        ' Turn off AutoFilter
+        .AutoFilterMode = False
+    End With ' Format the entire column K as Date
+    
+    ' Close the Notice of Separations workbook without saving changes
+    noticeOfSeparationsWorkbook.Close False
+    
+    ' Insert a new column at the beginning and name it "FTEVALIDATION"
+    masterlisthrisNewSheet.Columns("A:A").Insert Shift:=xlToRight
+    masterlisthrisNewSheet.Cells(1, 1).Value = "2024VALIDATION"
+    
+    ' Perform VLOOKUP for the entire column A tapos if may hit then change it to DELETE
+    For i = 2 To lastRowMasterlistHris
+    ' Use IFERROR to handle the case where VLOOKUP does not find a match
+        masterlisthrisNewSheet.Range("A" & i).Formula = "=IFERROR(IF(VLOOKUP(C" & i & ",2024!A:A,1,FALSE)<>"""",""DELETE"",""OK""), ""OK"")"
+    ' Paste values only
+        masterlisthrisNewSheet.Range("A" & i).Value = masterlisthrisNewSheet.Range("A" & i).Value
+    Next i
+    
+    ' Insert a new column at the beginning and name it "FTEVALIDATION"
+    masterlisthrisNewSheet.Columns("A:A").Insert Shift:=xlToRight
+    masterlisthrisNewSheet.Cells(1, 1).Value = "2023VALIDATION"
+    
+    ' Perform VLOOKUP for the entire column A tapos if may hit then change it to DELETE
+    For i = 2 To lastRowMasterlistHris
+    ' Use IFERROR to handle the case where VLOOKUP does not find a match
+        masterlisthrisNewSheet.Range("A" & i).Formula = "=IFERROR(IF(VLOOKUP(D" & i & ",2023!A:A,1,FALSE)<>"""",""DELETE"",""OK""), ""OK"")"
+    ' Paste values only
+        masterlisthrisNewSheet.Range("A" & i).Value = masterlisthrisNewSheet.Range("A" & i).Value
+    Next i
+    
+    ' Delete yung validation sa column A and C
+    With masterlisthrisNewSheet
+        .Columns("A:C").AutoFilter Field:=1, Criteria1:="DELETE", Operator:=xlAnd
+        .Columns("A:C").AutoFilter Field:=3, Criteria1:="OK"
+        If headerRow > 0 Then
+            .Rows(headerRow + 1).Resize(.Rows.Count - headerRow - 1).Delete Shift:=xlUp
+        End If
+        .AutoFilterMode = False ' Turn off AutoFilter
+    End With
+    
+    ' Delete yung validation sa column B and C
+    With masterlisthrisNewSheet
+        .Columns("A:C").AutoFilter Field:=2, Criteria1:="DELETE", Operator:=xlAnd
+        .Columns("A:C").AutoFilter Field:=3, Criteria1:="OK"
+        If headerRow > 0 Then
+            .Rows(headerRow + 1).Resize(.Rows.Count - headerRow - 1).Delete Shift:=xlUp
+        End If
+        .AutoFilterMode = False ' Turn off AutoFilter
+    End With
+    
+    ' Delete the VALIDATION column ng 2023, 2024 and FTE
+    masterlisthrisNewSheet.Columns("A:C").Delete
+    
+    ' Delete the "2023" sheet
+    Application.DisplayAlerts = False ' Disable alerts to avoid confirmation prompt
+    On Error Resume Next
+    NewWorkbook.Sheets("2023").Delete
+    On Error GoTo 0
+    Application.DisplayAlerts = True ' Enable alerts back
+    
+    ' Delete the "2024" sheet
+    Application.DisplayAlerts = False ' Disable alerts to avoid confirmation prompt
+    On Error Resume Next
+    NewWorkbook.Sheets("2024").Delete
+    On Error GoTo 0
+    Application.DisplayAlerts = True ' Enable alerts back
+    
+    '__________RENAME HEADER
+    
+    ' Rename the column header in masterlisthrisNewSheet
+    masterlisthrisNewSheet.Cells(1, 1).Value = "EMPNO"
+    masterlisthrisNewSheet.Cells(1, 2).Value = "AD USER"
+    masterlisthrisNewSheet.Cells(1, 3).Value = "SURNAME"
+    masterlisthrisNewSheet.Cells(1, 5).Value = "MIDDLENAME"
+    masterlisthrisNewSheet.Cells(1, 6).Value = "SUFFIX"
+    masterlisthrisNewSheet.Cells(1, 24).Value = "POSITION"
+    masterlisthrisNewSheet.Cells(1, 26).Value = "RANK"
+    masterlisthrisNewSheet.Cells(1, 34).Value = "ETYPE"
+    masterlisthrisNewSheet.Cells(1, 22).Value = "OU NAME"
+    masterlisthrisNewSheet.Cells(1, 15).Value = "EMPSTAT"
+    masterlisthrisNewSheet.Cells(1, 9).Value = "BIRTH DATE"
+    masterlisthrisNewSheet.Cells(1, 10).Value = "DATE OF JOIN"
+    masterlisthrisNewSheet.Cells(1, 17).Value = "CIVIL STATUS"
+    masterlisthrisNewSheet.Cells(1, 18).Value = "COST CENTER"
+    
+    ' Define the columns to keep in the specified order
+    columnsToKeep = Array("EMPNO", "SURNAME", "FIRSTNAME", "MIDDLENAME", "SUFFIX", "AD USER", "POSITION", "RANK", "ETYPE", "OU NAME", "DEPARTMENT", "EMPSTAT", "COST CENTER", "BIRTH DATE", "DATE OF JOIN", "GENDER", "CIVIL STATUS", "POSITIONNO")
+    
+    ' Loop through columns in reverse order to avoid issues with deleting
+    For i = masterlisthrisNewSheet.UsedRange.Columns.Count To 1 Step -1
+        If IsError(Application.Match(masterlisthrisNewSheet.Cells(1, i).Value, columnsToKeep, 0)) Then
+            masterlisthrisNewSheet.Columns(i).Delete
+        End If
+    Next i
+    
+    ' Rearrange the Initial Columns of the Masterlist (source: https://code.adonline.id.au/rearrange-columns-excel-vba/)
+    ColumnOrder = Array("EMPNO", "SURNAME", "FIRSTNAME", "MIDDLENAME", "SUFFIX", "AD USER", "POSITION", "RANK", "ETYPE", "OU NAME", "DEPARTMENT", "EMPSTAT", "COST CENTER", "BIRTH DATE", "DATE OF JOIN", "GENDER", "CIVIL STATUS", "POSITIONNO")
+    counter = 1
+
+    Application.ScreenUpdating = False
+   
+    For ndx = LBound(ColumnOrder) To UBound(ColumnOrder)
+        Set Found = Rows("1:1").Find(ColumnOrder(ndx), LookIn:=xlValues, LookAt:=xlWhole, SearchOrder:=xlByColumns, SearchDirection:=xlNext, MatchCase:=False)
+        If Not Found Is Nothing Then
+            If Found.Column <> counter Then
+                Found.EntireColumn.Cut
+                Columns(counter).Insert Shift:=xlToRight
+                Application.CutCopyMode = False
+            End If
+        counter = counter + 1
+        End If
+    Next ndx
+    Application.ScreenUpdating = True
+    
+    ' Remove numbers 0 to 9 from "POSITIONNO" column
+    Set positionColumn = masterlisthrisNewSheet.Columns("R")
+    
+    For i = 0 To 9
+        positionColumn.Replace What:=CStr(i), Replacement:="", LookAt:=xlPart, _
+            SearchOrder:=xlByColumns, MatchCase:=True, SearchFormat:=False, _
+            ReplaceFormat:=False, FormulaVersion:=xlReplaceFormula2
+    Next i
+    
+    ' Change the excess 0 in column J
+    Set positionColumn2 = masterlisthrisNewSheet.Columns("J")
+
+    ' Define the values to be replaced (0 to 9)
+    replaceValues = Array("_0000", "_000", "_00", "_0")
+
+    ' Loop through the array and replace values
+    For i = LBound(replaceValues) To UBound(replaceValues)
+        positionColumn2.Replace What:=CStr(replaceValues(i)), Replacement:="", LookAt:=xlPart, _
+            SearchOrder:=xlByColumns, MatchCase:=True, SearchFormat:=False, _
+            ReplaceFormat:=False, FormulaVersion:=xlReplaceFormula2
+    Next i
+    
+    '__________GROUP SECTOR AGE TENURE NEWGRADE VALIDATION
+    
+    ' Open GSTable workbook
+    Set GSTableWorkbook = Workbooks.Open(GSTableFilePath, UpdateLinks:=False, ReadOnly:=True)
+
+    ' Set the GSTable sheet (adjust the sheet name as needed)
+    Set GSTableSheet = GSTableWorkbook.Sheets("GS")
+
+    ' Add a new sheet to the WeeklyMasterlist workbook
+    Set groupsectornewSheet = NewWorkbook.Sheets.Add
+
+    ' Copy the content of GSTable sheet to the new sheet
+    GSTableSheet.UsedRange.Copy groupsectornewSheet.Cells(1, 1)
+    
+    ' Rename lang si PLN to MASTERLIST
+    groupsectornewSheet.Name = "GROUPSECTOR"
+
+    ' Close the GSTable workbook without saving changes
+    GSTableWorkbook.Close False
+    
+    ' Insert a new column for validation in the GROUPSECTOR sheet
+    groupsectornewSheet.Columns("A").Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
+    groupsectornewSheet.Cells(1, 1).Value = "VALIDATION"
+    
+    ' Concatenate the column B to E
+    groupsectorlastRow = groupsectornewSheet.Cells(groupsectornewSheet.Rows.Count, "B").End(xlUp).Row
+
+    ' Perform CONCATENATE
+    For i = 2 To groupsectorlastRow
+        groupsectornewSheet.Range("A" & i).Formula = "=B" & i & "&C" & i & "&D" & i & "&E" & i
+        groupsectornewSheet.Range("A" & i).Value = groupsectornewSheet.Range("A" & i).Value
+    Next i
+    
+    ' Add new column in MASTERLISTHRIS for Validation
+    masterlisthrisNewSheet.Cells(1, 19).Value = "VALIDATION"
+    
+    ' Find the last used row in the Masterlist HRIS
+    lastRowMasterlistHris = masterlisthrisNewSheet.Cells(masterlisthrisNewSheet.Rows.Count, "R").End(xlUp).Row
+    
+    ' Add CONCATENATE in MASTERLISTHRIS
+    For i = 2 To lastRowMasterlistHris
+         masterlisthrisNewSheet.Range("S" & i).Formula = "=R" & i & "&G" & i & "&J" & i & "&K" & i
+         masterlisthrisNewSheet.Range("S" & i).Value = masterlisthrisNewSheet.Range("S" & i).Value
+    Next i
+     
+    ' Insert Group and Sector column
+    masterlisthrisNewSheet.Columns("M").Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
+    masterlisthrisNewSheet.Cells(1, 13).Value = "GROUP"
+    
+    masterlisthrisNewSheet.Columns("N").Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
+    masterlisthrisNewSheet.Cells(1, 14).Value = "SECTOR"
+    
+    ' Perform VLOOKUP in the Group and Sector Column then if there is an error then the it will automatically changed to FOR CHECKING
+    For i = 2 To lastRowMasterlistHris
+    ' Use IFERROR to handle the case where VLOOKUP does not find a match
+        masterlisthrisNewSheet.Range("M" & i).Formula = "=IFERROR(VLOOKUP(U" & i & ",GROUPSECTOR!A:F,6,FALSE),""FOR CHECKING"")"
+        masterlisthrisNewSheet.Range("N" & i).Formula = "=IFERROR(VLOOKUP(U" & i & ",GROUPSECTOR!A:G,7,FALSE),""FOR CHECKING"")"
+    ' Paste values only
+        masterlisthrisNewSheet.Range("M" & i).Value = masterlisthrisNewSheet.Range("M" & i).Value
+        masterlisthrisNewSheet.Range("N" & i).Value = masterlisthrisNewSheet.Range("N" & i).Value
+    Next i
+    
+    masterlisthrisNewSheet.Columns("T").Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
+    masterlisthrisNewSheet.Cells(1, 20).Value = "OFFICE"
+    
+    ' Perform VLOOKUP in the Group and Sector Column then if there is an error then the it will automatically changed to FOR CHECKING
+    For i = 2 To lastRowMasterlistHris
+    ' Use IFERROR to handle the case where VLOOKUP does not find a match
+        masterlisthrisNewSheet.Range("T" & i).Formula = "=IFERROR(VLOOKUP(V" & i & ",GROUPSECTOR!A:H,8,FALSE),""FOR CHECKING"")"
+    ' Paste values only
+        masterlisthrisNewSheet.Range("T" & i).Value = masterlisthrisNewSheet.Range("T" & i).Value
+    Next i
+    
+    ' Delete the VALIDATION column
+    masterlisthrisNewSheet.Columns("V").Delete
+    masterlisthrisNewSheet.Columns("U").Delete
+    
+    ' Delete the "GROUPSECTOR" sheet
+    Application.DisplayAlerts = False ' Disable alerts to avoid confirmation prompt
+    On Error Resume Next
+    NewWorkbook.Sheets("GROUPSECTOR").Delete
+    On Error GoTo 0
+    Application.DisplayAlerts = True ' Enable alerts back
+    
+    ' Insert Tenure, Age, New Grade
+    masterlisthrisNewSheet.Cells(1, 21).Value = "TENURE"
+    masterlisthrisNewSheet.Cells(1, 22).Value = "AGE"
+    masterlisthrisNewSheet.Cells(1, 23).Value = "NEW GRADE"
+    
+    ' Perform TENURE computation
+    For i = 2 To lastRowMasterlistHris
+        masterlisthrisNewSheet.Range("U" & i).Formula = "=YEARFRAC(Q" & i & ",TODAY())"
+        masterlisthrisNewSheet.Range("U" & i).Value = masterlisthrisNewSheet.Range("U" & i).Value
+    Next i
+    
+    ' Change format of Tenure Column
+    Columns(21).NumberFormat = "0.00"
+    
+    ' Perform AGE computation
+    For i = 2 To lastRowMasterlistHris
+        masterlisthrisNewSheet.Range("V" & i).Formula = "=YEARFRAC(P" & i & ",TODAY())"
+        masterlisthrisNewSheet.Range("V" & i).Value = masterlisthrisNewSheet.Range("V" & i).Value
+    Next i
+
+    ' Change format of Age Column
+    Columns(22).NumberFormat = "0.00"
+    
+    ' Adding NEWGRADE
+    Set rankColumn = masterlisthrisNewSheet.Range("H1:H" & lastRowMasterlistHris)
+    
+    ' Assuming your data starts from row 2, adjust as needed
+    Set newGradeColumn = masterlisthrisNewSheet.Range("W1:W" & lastRowMasterlistHris)
+    
+    ' Loop through each row
+    For i = 2 To lastRowMasterlistHris
+        ' Get the rank from column H
+        rank = Trim(rankColumn.Cells(i, 1).Value)
+        
+        ' Assign new grade based on rank
+        Select Case rank
+            Case "JC"
+                newGradeColumn.Cells(i, 1).Value = 1
+            Case "SC"
+                newGradeColumn.Cells(i, 1).Value = 2
+            Case "A"
+                newGradeColumn.Cells(i, 1).Value = 3
+            Case "SA"
+                newGradeColumn.Cells(i, 1).Value = 4
+            Case "S"
+                newGradeColumn.Cells(i, 1).Value = 5
+            Case "SS"
+                newGradeColumn.Cells(i, 1).Value = 6
+            Case "AM1"
+                newGradeColumn.Cells(i, 1).Value = 7
+            Case "AM2"
+                newGradeColumn.Cells(i, 1).Value = 8
+            Case "M1"
+                newGradeColumn.Cells(i, 1).Value = 9
+            Case "M2"
+                newGradeColumn.Cells(i, 1).Value = 10
+            Case "SM"
+                newGradeColumn.Cells(i, 1).Value = 11
+            Case "AVP"
+                newGradeColumn.Cells(i, 1).Value = 12
+            Case "SAVP"
+                newGradeColumn.Cells(i, 1).Value = 13
+            Case "VP"
+                newGradeColumn.Cells(i, 1).Value = 14
+            Case "FVP"
+                newGradeColumn.Cells(i, 1).Value = 15
+            Case "SVP"
+                newGradeColumn.Cells(i, 1).Value = 16
+            Case "FSVP", "OIC"
+                newGradeColumn.Cells(i, 1).Value = 17
+            Case "EVP"
+                newGradeColumn.Cells(i, 1).Value = 18
+            Case "Pres"
+                newGradeColumn.Cells(i, 1).Value = 19
+            Case Else
+                ' Handle any other ranks or leave it as it is
+        End Select
+    Next i
+    
+    '__________COST CENTER
+    
+    ' Open GSTable workbook
+    Set costcenterWorkbook = Workbooks.Open(costcenterfilePath, UpdateLinks:=False, ReadOnly:=True)
+
+    ' Set the cost center sheet
+    Set costcenterSheet = costcenterWorkbook.Sheets(1)
+
+    ' Add a new sheet to the WeeklyMasterlist workbook
+    Set costcenternewSheet = NewWorkbook.Sheets.Add
+
+    ' Copy to content of the Cost Center File
+    costcenterSheet.UsedRange.Copy costcenternewSheet.Cells(1, 1)
+    
+    ' Rename lang si PLN to MASTERLIST
+    costcenternewSheet.Name = "COSTCENTER"
+
+    ' Close the original workbook without saving
+    costcenterWorkbook.Close False
+    
+    ' Copy column B
+    costcenternewSheet.Columns("C").Copy
+    
+    ' Insert (paste) it into column A
+    costcenternewSheet.Columns("B").Insert Shift:=xlToRight
+    
+    ' Insert Cost Center Code in Masterlist HRIS
+    masterlisthrisNewSheet.Columns("P").Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
+    masterlisthrisNewSheet.Cells(1, 16).Value = "COST CODE"
+    
+    ' Perform VLOOKUP in the Group and Sector Column then if there is an error then the it will automatically changed to FOR CHECKING
+    For i = 2 To lastRowMasterlistHris
+    ' Use IFERROR to handle the case where VLOOKUP does not find a match
+        masterlisthrisNewSheet.Range("P" & i).Formula = "=IFERROR(VLOOKUP(O" & i & ",COSTCENTER!B:C,2,FALSE),""FOR CHECKING"")"
+    ' Paste values only
+        masterlisthrisNewSheet.Range("P" & i).Value = masterlisthrisNewSheet.Range("P" & i).Value
+    Next i
+    
+    ' Delete the "GROUPSECTOR" sheet
+    Application.DisplayAlerts = False ' Disable alerts to avoid confirmation prompt
+    On Error Resume Next
+    NewWorkbook.Sheets("COSTCENTER").Delete
+    On Error GoTo 0
+    Application.DisplayAlerts = True ' Enable alerts back
+    
+    '__________ADDITIONAL REQUIREMENT
+    
+    ' Change the Cost Center to 4 Digits
+    masterlisthrisNewSheet.Columns("Q").Insert Shift:=xlToRight
+    masterlisthrisNewSheet.Cells(1, 17).Value = "COST CODE"
+
+    For i = 2 To lastRowMasterlistHris
+        masterlisthrisNewSheet.Range("Q" & i).Formula = "=TEXT(P" & i & ",""0000"")"
+    Next i
+    
+    masterlisthrisNewSheet.Columns("Q").Copy
+    masterlisthrisNewSheet.Columns("Q").PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks:=False, Transpose:=False
+    masterlisthrisNewSheet.Columns("P").Delete
+    
+    ' Change the Suffix
+    Set suffixColumn = masterlisthrisNewSheet.Range("E1:E" & lastRowMasterlistHris)
+    
+    ' Loop through each row
+    For i = 2 To lastRowMasterlistHris
+        ' Get the rank from column H
+        suffixrep = Trim(suffixColumn.Cells(i, 1).Value)
+        
+        ' Assign new grade based on rank
+        Select Case suffixrep
+            Case "JR"
+                suffixColumn.Cells(i, 1).Value = "Jr."
+            Case "Jr"
+                suffixColumn.Cells(i, 1).Value = "Jr."
+            Case "jr"
+                suffixColumn.Cells(i, 1).Value = "Jr."
+            Case "Jr."
+                suffixColumn.Cells(i, 1).Value = "Jr."
+            Case "jr."
+                suffixColumn.Cells(i, 1).Value = "Jr."
+            Case "II"
+                suffixColumn.Cells(i, 1).Value = "II"
+            Case "III"
+                suffixColumn.Cells(i, 1).Value = "III"
+            Case "IV"
+                suffixColumn.Cells(i, 1).Value = "IV"
+            Case "V"
+                suffixColumn.Cells(i, 1).Value = "V"
+            Case "VI"
+                suffixColumn.Cells(i, 1).Value = "VI"
+            Case "SR"
+                suffixColumn.Cells(i, 1).Value = "Sr."
+            Case "sr"
+                suffixColumn.Cells(i, 1).Value = "Sr."
+            Case "Sr."
+                suffixColumn.Cells(i, 1).Value = "Sr."
+            Case Else
+                suffixColumn.Cells(i, 1).Value = ""
+        End Select
+    Next i
+    
+    ' Add the Origin
+    masterlisthrisNewSheet.Columns("U").Insert Shift:=xlToRight
+    masterlisthrisNewSheet.Cells(1, 21).Value = "ORIGIN"
+    
+    ' Perform VLOOKUP to get the Origin and if result is error (N/A) then it will automatically change to PNB
+    For i = 2 To lastRowMasterlistHris
+    ' Use IFERROR to handle the case where VLOOKUP does not find a match
+        masterlisthrisNewSheet.Range("U" & i).Formula = "=IFERROR(VLOOKUP(A" & i & ",MANPOWERLIST!B:AB,27,FALSE),""PNB"")"
+    ' Paste values only
+        masterlisthrisNewSheet.Range("U" & i).Value = masterlisthrisNewSheet.Range("U" & i).Value
+    Next i
+    
+    ' Delete the "MANPOWERLIST" sheet
+    Application.DisplayAlerts = False ' Disable alerts to avoid confirmation prompt
+    On Error Resume Next
+    NewWorkbook.Sheets("MANPOWERLIST").Delete
+    On Error GoTo 0
+    Application.DisplayAlerts = True ' Enable alerts back
+    
+    ' Change the Employee Number to Text
+    masterlisthrisNewSheet.Columns("A").NumberFormat = "@"
+    
+    '__________OUTPUT FILE
+
+    ' Set the path for the new workbook
+    newPath = outputFile
+    
+    ' Rename and save the new workbook
+    NewWorkbook.SaveAs newPath
+    
+    ' Close the new workbook
+    NewWorkbook.Close True
+    
+    Application.EnableEvents = True
+    Application.Calculation = xlCalculationAutomatic
+    Application.ScreenUpdating = True
+    
+    MsgBox "TAYO AY MANALIG NA TAMA ANG ATING MASTERLIST. CHERET!"
+
+End Sub
+'
+' Version History:
+' JLCLAUDIO     01232024 - Change the Employee Number to Text
+' LGBESPIRITU   01242024 - Change the Cost Center to 4 digits
+' LGBESPIRITU   01242024 - Change the Suffix
+' LGBESPIRITU   01242024 - Add the Origin
